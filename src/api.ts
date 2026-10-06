@@ -1,5 +1,18 @@
 import { GameResult, Platform } from './types';
 
+async function safeJson(res: Response) {
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return await res.json();
+  }
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { success: false, message: `Server error (${res.status}): ${text.slice(0, 100)}` };
+  }
+}
+
 // API Client for the Express proxy
 export async function apiLogin(phone: string, password: string, platform: Platform = '777') {
   try {
@@ -8,7 +21,7 @@ export async function apiLogin(phone: string, password: string, platform: Platfo
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, password, platform })
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (error: any) {
     return { success: false, message: error?.message || 'Network error connecting to proxy' };
   }
@@ -21,7 +34,7 @@ export async function apiGetIssue(platform: Platform = '777', token?: string, ga
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ platform, token, gameId })
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (error: any) {
     return { success: false, message: error?.message || 'Network error' };
   }
@@ -34,7 +47,7 @@ export async function apiGetBalance(token: string, platform: Platform = '777', g
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, platform, gameId })
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (error: any) {
     return { success: false, message: error?.message || 'Network error' };
   }
@@ -47,7 +60,7 @@ export async function apiCheckSession(gameId: string) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ gameId })
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (error: any) {
     return { success: false, message: error?.message || 'Network error' };
   }
@@ -60,7 +73,7 @@ export async function apiGetUserInfo(token: string, platform: Platform = '777') 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, platform })
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (error: any) {
     return { success: false, message: error?.message || 'Network error' };
   }
@@ -80,7 +93,7 @@ export async function apiPlaceBet(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, amount, betType, issueId, platform, gameId })
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (error: any) {
     return { success: false, message: error?.message || 'Network error' };
   }
@@ -93,7 +106,7 @@ export async function apiGetResults(platform: Platform = '777', count = 15, toke
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ platform, count, token })
     });
-    return await res.json();
+    return await safeJson(res);
   } catch (error: any) {
     return { success: false, message: error?.message || 'Network error' };
   }

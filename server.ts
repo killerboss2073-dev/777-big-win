@@ -12,13 +12,34 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
+// CORS & Preflight handling
+app.use((_req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-key');
+  if (_req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// URL Normalizer: Supports both /api/login and /login if rewritten on serverless hosts
+app.use((req, _res, next) => {
+  if (!req.url.startsWith('/api') && !req.url.startsWith('/assets') && !req.url.includes('.')) {
+    req.url = '/api' + (req.url.startsWith('/') ? req.url : '/' + req.url);
+  }
+  next();
+});
+
 // Telegram Bot Configuration
 const TELEGRAM_BOT_TOKEN = '8682945050:AAFECoNO45TTYl8tFPXMkpWc287dlypdrJ8';
 const ADMIN_USER_ID = '8370471165';
 const TELEGRAM_API_BASE = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
-// Persistence File
-const DATA_FILE = path.join(__dirname, 'bot_data.json');
+// Persistence File (use /tmp on serverless environments like Vercel)
+const DATA_FILE = process.env.VERCEL
+  ? path.join('/tmp', 'bot_data.json')
+  : path.join(__dirname, 'bot_data.json');
 
 // Memory Data Store
 interface UserSessionRecord {
@@ -143,8 +164,10 @@ async function pollTelegramUpdates() {
   }
 }
 
-// Periodically poll telegram updates
-setInterval(pollTelegramUpdates, 4000);
+// Periodically poll telegram updates (when running as persistent Node process)
+if (!process.env.VERCEL) {
+  setInterval(pollTelegramUpdates, 4000);
+}
 
 async function handleAdminTelegramCommand(chatId: string, text: string) {
   // 1. Add Game IDs: /aid 761699,864480

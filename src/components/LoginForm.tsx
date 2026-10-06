@@ -46,7 +46,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         body: JSON.stringify({ phone: phone.trim(), password, platform })
       });
 
-      const data = await res.json();
+      let data: any = null;
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error(text.slice(0, 80) || `Server error (${res.status})`);
+        }
+      }
 
       if (data.accessDenied) {
         // Show ACCESS DENIED modal
