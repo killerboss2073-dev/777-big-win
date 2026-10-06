@@ -1,0 +1,6 @@
+{
+  "name": "Monkey D Luffy Betting Bot",
+  "description": "777 Big Win & 6Lottery WinGo real API auto-betting platform inspired by the Telegram bot with AI predictions, SL Layer pattern, BS & Colour formula engines.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

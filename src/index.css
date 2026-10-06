@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .clip-banner {
+    clip-path: polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%);
+  }
+  .clip-trapezoid {
+    clip-path: polygon(5% 0%, 95% 0%, 100% 100%, 0% 100%);
+  }
+}
+
+/* Custom glow effects for Luffy Bot theme */
+.luffy-glow {
+  box-shadow: 0 0 25px -5px rgba(220, 38, 38, 0.4), 0 0 10px -2px rgba(239, 68, 68, 0.3);
+}
+
+.luffy-card-glow {
+  box-shadow: 0 0 20px -8px rgba(239, 68, 68, 0.25);
+}
+
+.text-glow {
+  text-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+}
+
+/* Smooth custom scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #111218;
+}
+::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ef4444;
+}
