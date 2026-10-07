@@ -4,6 +4,7 @@ import { LuffyAvatar } from './LuffyAvatar';
 
 interface HeroSectionProps {
   isLoggedIn: boolean;
+  isAdmin?: boolean;
   activeView: 'login' | 'dashboard';
   onToggleView: () => void;
   language: 'my' | 'en';
@@ -12,6 +13,7 @@ interface HeroSectionProps {
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
   isLoggedIn,
+  isAdmin = false,
   activeView,
   onToggleView,
   language,
@@ -24,9 +26,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
       {/* Main Avatar + Heading Lockup */}
       <div className="flex items-center justify-center gap-4 sm:gap-6 mb-4">
-        {/* Left: Avatar with secret Admin trigger */}
+        {/* Left: Avatar with secret Admin trigger (Admin only clickable) */}
         <div className="shrink-0">
-          <LuffyAvatar size="lg" onAdminClick={onAdminClick} />
+          <LuffyAvatar size="lg" isAdmin={isAdmin} onAdminClick={onAdminClick} />
         </div>
 
         {/* Right: Titles updated to KILLERBOSS LOTTERY BOT */}

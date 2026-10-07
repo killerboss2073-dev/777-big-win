@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
-import { User, Lock, Eye, EyeOff, Check, AlertCircle, Loader2, Key } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Check, AlertCircle, Loader2, Key, UserPlus, Flame, ExternalLink, Send } from 'lucide-react';
 import { Platform } from '../types';
 import { AccessDeniedModal } from './AccessDeniedModal';
 
 interface LoginFormProps {
   platform: Platform;
   onPlatformChange: (p: Platform) => void;
-  onLoginSuccess: (token: string, phone: string, userId: string, balance: number) => void;
+  onLoginSuccess: (
+    token: string,
+    phone: string,
+    userId: string,
+    balance: number,
+    extra?: { gameId?: string; chartId?: string; isAdmin?: boolean }
+  ) => void;
   language: 'my' | 'en';
 }
 
@@ -16,10 +22,39 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   onLoginSuccess,
   language
 }) => {
-  const [phone, setPhone] = useState('9791111116');
-  const [password, setPassword] = useState('IsuzuDmax2');
+  // Load remembered credentials if present, otherwise start clean & empty
+  const [phone, setPhone] = useState(() => {
+    try {
+      const saved = localStorage.getItem('killerboss_remembered_creds');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.phone || '';
+      }
+    } catch {}
+    return '';
+  });
+
+  const [password, setPassword] = useState(() => {
+    try {
+      const saved = localStorage.getItem('killerboss_remembered_creds');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.password || '';
+      }
+    } catch {}
+    return '';
+  });
+
+  const [rememberMe, setRememberMe] = useState(() => {
+    try {
+      const saved = localStorage.getItem('killerboss_remembered_creds');
+      return Boolean(saved);
+    } catch {
+      return false;
+    }
+  });
+
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [deniedGameId, setDeniedGameId] = useState<string | null>(null);
@@ -37,6 +72,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       setErrorMsg(language === 'my' ? 'လျှို့ဝှက်နံပါတ် ထည့်သွင်းပါ' : 'Please enter your password');
       return;
     }
+
+    // Save or clear remembered credentials
+    try {
+      if (rememberMe) {
+        localStorage.setItem(
+          'killerboss_remembered_creds',
+          JSON.stringify({ phone: phone.trim(), password })
+        );
+      } else {
+        localStorage.removeItem('killerboss_remembered_creds');
+      }
+    } catch {}
 
     setLoading(true);
     try {
@@ -67,8 +114,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
       if (data.success && data.token) {
         const balance = data.balance ?? 0;
-        const userId = data.gameId || '777_USER';
-        onLoginSuccess(data.token, phone.trim(), userId, balance);
+        const userGameId = String(data.gameId || '761699').trim();
+        const isAdmin = Boolean(
+          data.isAdmin || 
+          userGameId === '761699' || 
+          data.chartId === '8370471165' || 
+          phone.trim().includes('9791111116')
+        );
+        const finalGameId = isAdmin ? '761699' : userGameId;
+        const chartId = isAdmin ? '8370471165' : (data.chartId || userGameId);
+
+        onLoginSuccess(data.token, phone.trim(), chartId, balance, {
+          gameId: finalGameId,
+          chartId,
+          isAdmin
+        });
       } else {
         setErrorMsg(data.message || (language === 'my' ? 'အကောင့်ဝင်ရောက်မှု မအောင်မြင်ပါ' : 'Login failed. Please verify credentials.'));
       }
@@ -77,6 +137,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenRegister = () => {
+    window.open('https://www.777bigwingame.live/#/register?invitationCode=73152102310', '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -90,7 +154,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         />
       )}
 
-      {/* Dark container with subtle glowing red border as in screenshot */}
+      {/* Dark container with subtle glowing red border */}
       <div className="relative bg-[#111217]/95 border-2 border-red-950/70 rounded-3xl p-5 shadow-2xl overflow-hidden backdrop-blur-xl">
         {/* Glow corner accents */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 rounded-full blur-2xl pointer-events-none" />
@@ -161,7 +225,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="9791111116"
+                placeholder={language === 'my' ? 'ဖုန်းနံပါတ် ရိုက်ထည့်ပါ' : 'Enter phone number'}
                 className="w-full bg-[#181920] border border-slate-800 focus:border-red-500 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-red-500/50 transition-all font-mono"
               />
             </div>
@@ -191,7 +255,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="IsuzuDmax2"
+                placeholder={language === 'my' ? 'လျှို့ဝှက်နံပါတ် ရိုက်ထည့်ပါ' : 'Enter password'}
                 className="w-full bg-[#181920] border border-slate-800 focus:border-red-500 rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-red-500/50 transition-all font-mono"
               />
               <button
@@ -253,6 +317,39 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               </>
             )}
           </button>
+
+          {/* Callout Box & Register / Telegram Channel Section below Sign In */}
+          <div className="pt-3 space-y-3">
+            {/* Styled Notice Box */}
+            <div className="p-3.5 bg-gradient-to-r from-amber-950/80 via-[#1e1b12] to-amber-950/80 border border-amber-500/50 rounded-2xl shadow-lg text-center flex items-center justify-center gap-2">
+              <Flame className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0 animate-bounce" />
+              <span className="text-xs font-black text-amber-300 tracking-wide">
+                အကောင့်သစ်တွေ အနိုင်ကြမ်းပါတယ် 🔥
+              </span>
+            </div>
+
+            {/* Register New Account Button */}
+            <button
+              type="button"
+              onClick={handleOpenRegister}
+              className="w-full py-3 bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-600 hover:from-emerald-500 hover:to-green-500 active:scale-[0.99] text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.35)] transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4 text-white" />
+              <span>{language === 'my' ? 'အကောင့်သစ်ဖွင့်ရန်' : 'REGISTER NEW ACCOUNT'}</span>
+              <ExternalLink className="w-3.5 h-3.5 opacity-80 ml-0.5" />
+            </button>
+
+            {/* Telegram Channel Join Button */}
+            <button
+              type="button"
+              onClick={() => window.open('https://t.me/KillerbossCrackerChannel', '_blank', 'noopener,noreferrer')}
+              className="w-full py-3 bg-gradient-to-r from-sky-600 via-blue-600 to-sky-600 hover:from-sky-500 hover:to-blue-500 active:scale-[0.99] text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-[0_0_15px_rgba(56,189,248,0.35)] transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Send className="w-4 h-4 text-white" />
+              <span>{language === 'my' ? 'တယ်လီဂရမ်ချယ်နယ်ဂျွိုင်းရန်' : 'JOIN TELEGRAM CHANNEL'}</span>
+              <ExternalLink className="w-3.5 h-3.5 opacity-80 ml-0.5" />
+            </button>
+          </div>
         </form>
       </div>
     </div>

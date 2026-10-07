@@ -35,6 +35,12 @@ export interface UserSession {
   phone: string;
   token: string;
   userId: string;
+  gameId?: string;
+  chartId?: string;
+  isAdmin?: boolean;
+  displayName?: string;
+  avatar?: string;
+  badge?: 'BOSS' | 'VIP' | 'MASTER' | 'MEMBER' | 'BOT';
   balance: number;
   platform: Platform;
 }
@@ -65,4 +71,53 @@ export interface BotStats {
   totalBets: number;
   wins: number;
   losses: number;
+}
+
+export interface ChatSignal {
+  issue: string;
+  prediction: 'BIG' | 'SMALL' | 'RED' | 'GREEN' | 'VIOLET';
+  confidence: number;
+  recommendedAmount?: number;
+  status?: 'PENDING' | 'WIN' | 'LOSE';
+}
+
+export interface TipRain {
+  id: string;
+  amount: number;
+  totalWinners: number;
+  claimedBy: string[];
+}
+
+export interface ChatMessage {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  userBadge: 'BOSS' | 'VIP' | 'MASTER' | 'MEMBER' | 'BOT';
+  text: string;
+  timestamp: string;
+  timeFormatted: string;
+  reactions: Record<string, number>;
+  isBot?: boolean;
+  isHonoraryApproved?: boolean;
+  signal?: ChatSignal;
+  tipRain?: TipRain;
+  voiceAudio?: {
+    duration: number;
+    label: string;
+  };
+}
+
+export interface UserAppSettings {
+  language: 'my' | 'en';
+  soundEnabled: boolean;
+  chatSound: boolean;
+  winSound: boolean;
+  voiceAnnounce: boolean;
+  defaultAmount: number;
+  chartOverlayChat: boolean;
+  theme: 'neon-dark' | 'gold-luxury' | 'cyber-red';
+  customAvatar: string;
+  customName: string;
+  userBadge: 'BOSS' | 'VIP' | 'MASTER' | 'MEMBER';
 }

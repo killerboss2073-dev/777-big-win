@@ -57,7 +57,7 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
   // Bot Settings state matching Telegram Bot logic
   const [settings, setSettings] = useState<BotSettings>({
     mode: 'bot',
-    betSequence: [100, 300, 700, 1600, 3200, 7600, 16000, 32000],
+    betSequence: [1000, 3000, 7000, 16000, 32000, 76000, 160000, 320000],
     currentBetIndex: 0,
     bsPattern: 'B,S,B,B',
     bsIndex: 0,
@@ -69,8 +69,8 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
     waitLossCount: 0,
     slBetCount: 0,
     isWaitMode: true,
-    profitTarget: 5000,
-    lossTarget: 3000,
+    profitTarget: 50000,
+    lossTarget: 30000,
     isRunning: false
   });
 
@@ -605,7 +605,7 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-black text-white">{maskPhone(session.phone)}</span>
               <span className="text-[10px] px-1.5 py-0.2 rounded bg-red-950 text-red-300 font-mono">
-                ID: {session.userId}
+                ID: {session.gameId || session.userId}
               </span>
             </div>
             <div className="flex items-center gap-1 text-[11px] text-slate-400">
@@ -940,29 +940,64 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
 
             {/* Amount Presets */}
             <div>
-              <label className="text-[11px] font-bold text-slate-300 block mb-1.5 uppercase">
-                Select Bet Amount (K)
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[100, 300, 500, 1000, 5000, 10000].map((amt) => (
-                  <button
-                    key={amt}
-                    onClick={() => setManualAmount(amt)}
-                    className={`py-2 rounded-xl font-mono text-xs font-bold border transition-all cursor-pointer ${
-                      manualAmount === amt
-                        ? 'bg-red-600 text-white border-red-400 shadow-md'
-                        : 'bg-[#181922] text-slate-300 border-slate-800 hover:border-slate-700'
-                    }`}
-                  >
-                    {amt >= 1000 ? `${amt / 1000}K` : amt} K
-                  </button>
-                ))}
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[11px] font-bold text-slate-300 uppercase">
+                  {language === 'my' ? 'လောင်းကြေးပမာဏ ရွေးချယ်ပါ:' : 'Select Bet Amount:'}
+                </label>
+                <span className="text-[10px] font-mono text-amber-400 font-bold">
+                  {manualAmount.toLocaleString()} K
+                </span>
               </div>
+
+              {/* 1,000 ~ 320,000 Series */}
+              <div className="mb-1.5">
+                <span className="text-[9px] text-slate-400 font-semibold block mb-1">
+                  1,000 ~ 320,000 (8-Step Martingale):
+                </span>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[1000, 3000, 7000, 16000, 32000, 76000, 160000, 320000].map((amt) => (
+                    <button
+                      key={amt}
+                      onClick={() => setManualAmount(amt)}
+                      className={`py-1.5 rounded-xl font-mono text-[11px] font-black border transition-all cursor-pointer ${
+                        manualAmount === amt
+                          ? 'bg-red-600 text-white border-red-400 shadow-md scale-102'
+                          : 'bg-[#181922] text-slate-300 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      {amt.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 100 ~ 72,900 Series */}
+              <div>
+                <span className="text-[9px] text-slate-400 font-semibold block mb-1">
+                  100 ~ 72,900 (7-Step 3X Formula):
+                </span>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[100, 300, 900, 2700, 8100, 24300, 72900].map((amt) => (
+                    <button
+                      key={amt}
+                      onClick={() => setManualAmount(amt)}
+                      className={`py-1.5 rounded-xl font-mono text-[11px] font-black border transition-all cursor-pointer ${
+                        manualAmount === amt
+                          ? 'bg-amber-600 text-white border-amber-400 shadow-md scale-102'
+                          : 'bg-[#181922] text-slate-300 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      {amt.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <input
                 type="number"
                 value={manualAmount}
                 onChange={(e) => setManualAmount(Math.max(10, parseInt(e.target.value, 10) || 0))}
-                className="w-full mt-2 bg-[#111218] border border-slate-800 focus:border-red-500 rounded-xl px-3 py-2 text-sm text-white font-mono"
+                className="w-full mt-2 bg-[#111218] border border-slate-800 focus:border-red-500 rounded-xl px-3 py-2 text-xs text-white font-mono"
                 placeholder="Custom Amount (min 10 K)"
               />
             </div>
@@ -1277,14 +1312,35 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
 
             {/* Bet Sequence Input */}
             <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1">
-                Martingale Bet Sequence (K)
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold text-slate-300">
+                  Martingale Bet Sequence (K)
+                </label>
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="flex gap-1.5 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setTempSequence('1000, 3000, 7000, 16000, 32000, 76000, 160000, 320000')}
+                  className="flex-1 py-1 px-1.5 bg-red-950 text-red-300 border border-red-800 rounded-lg text-[10px] font-bold hover:bg-red-900 transition-all cursor-pointer"
+                >
+                  ⚡ 1000 ~ 320K (8L)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTempSequence('100, 300, 900, 2700, 8100, 24300, 72900')}
+                  className="flex-1 py-1 px-1.5 bg-amber-950 text-amber-300 border border-amber-800 rounded-lg text-[10px] font-bold hover:bg-amber-900 transition-all cursor-pointer"
+                >
+                  🎯 100 ~ 72.9K (7L 3X)
+                </button>
+              </div>
+
               <input
                 type="text"
                 value={tempSequence}
                 onChange={(e) => setTempSequence(e.target.value)}
-                placeholder="100, 300, 700, 1600, 3200, 7600, 16000, 32000"
+                placeholder="1000, 3000, 7000, 16000, 32000, 76000, 160000, 320000"
                 className="w-full bg-[#111218] border border-slate-800 focus:border-red-500 rounded-xl px-3 py-2 text-xs font-mono text-white"
               />
             </div>

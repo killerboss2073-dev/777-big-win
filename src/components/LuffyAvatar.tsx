@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import itachiLogoImg from '../assets/images/itachi_logo_avatar_1791120287312.jpg';
+import killerbossAvatarImg from '../assets/images/killerboss_avatar_1791104818892.jpg';
 
 interface LuffyAvatarProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showPulse?: boolean;
+  isAdmin?: boolean;
   onAdminClick?: () => void;
 }
 
 export const LuffyAvatar: React.FC<LuffyAvatarProps> = ({
   size = 'lg',
   showPulse = true,
+  isAdmin = false,
   onAdminClick
 }) => {
   const [imageError, setImageError] = useState(false);
@@ -21,6 +24,8 @@ export const LuffyAvatar: React.FC<LuffyAvatarProps> = ({
     xl: 'w-32 h-32'
   }[size];
 
+  const currentAvatarSrc = isAdmin ? itachiLogoImg : killerbossAvatarImg;
+
   return (
     <div className={`relative ${sizeClasses} mx-auto flex items-center justify-center`}>
       {/* Outer lightning & red aura glow */}
@@ -31,16 +36,21 @@ export const LuffyAvatar: React.FC<LuffyAvatarProps> = ({
         </>
       )}
 
-      {/* Circular Avatar Border Frame */}
+      {/* Circular Avatar Border Frame (Logo cannot be clicked if not Admin) */}
       <div
-        onClick={onAdminClick}
-        className="relative w-full h-full rounded-full p-[3px] bg-gradient-to-b from-red-500 via-red-600 to-red-950 shadow-[0_0_25px_rgba(220,38,38,0.6)] overflow-hidden flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+        onClick={isAdmin ? onAdminClick : undefined}
+        className={`relative w-full h-full rounded-full p-[3px] bg-gradient-to-b from-red-500 via-red-600 to-red-950 shadow-[0_0_25px_rgba(220,38,38,0.6)] overflow-hidden flex items-center justify-center select-none ${
+          isAdmin
+            ? 'cursor-pointer active:scale-95 transition-transform'
+            : 'cursor-default pointer-events-none'
+        }`}
+        title={isAdmin ? "Hitachi Admin Logo" : "777 Big Win Killerboss"}
       >
         <div className="w-full h-full rounded-full bg-gradient-to-b from-[#1a1b24] to-[#0a0000] flex items-center justify-center overflow-hidden relative">
           {!imageError ? (
             <img
-              src={itachiLogoImg}
-              alt="Itachi Uchiha Logo"
+              src={currentAvatarSrc}
+              alt={isAdmin ? "Hitachi Admin Logo" : "777 Killerboss Logo"}
               className="w-full h-full object-cover scale-105"
               onError={() => setImageError(true)}
             />
@@ -66,14 +76,16 @@ export const LuffyAvatar: React.FC<LuffyAvatarProps> = ({
         </div>
       </div>
 
-      {/* Decorative mini badge at bottom right */}
-      <div
-        onClick={onAdminClick}
-        className="absolute -bottom-1 -right-1 bg-red-600 text-[10px] font-black tracking-wider text-white px-2.5 py-0.5 rounded-full border-2 border-white shadow-lg cursor-pointer hover:bg-red-500 active:scale-95 transition-all"
-        title="Admin Access"
-      >
-        MOD
-      </div>
+      {/* Decorative mini badge at bottom right - only shown and clickable for Admin */}
+      {isAdmin && (
+        <div
+          onClick={onAdminClick}
+          className="absolute -bottom-1 -right-1 bg-red-600 text-[10px] font-black tracking-wider text-white px-2.5 py-0.5 rounded-full border-2 border-white shadow-lg cursor-pointer hover:bg-red-500 active:scale-95 transition-all"
+          title="Admin Control"
+        >
+          ADMIN
+        </div>
+      )}
     </div>
   );
 };

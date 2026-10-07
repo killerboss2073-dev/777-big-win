@@ -10,8 +10,15 @@ import {
   Check,
   KeyRound,
   Bot,
-  Lock
+  Lock,
+  Crown,
+  Volume2,
+  Send,
+  Sparkles,
+  Award
 } from 'lucide-react';
+import { playSoundEffect } from '../api';
+import itachiLogoImg from '../assets/images/itachi_logo_avatar_1791120287312.jpg';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -43,13 +50,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
-  const [activeTab, setActiveTab] = useState<'ids' | 'online' | 'denied' | 'bot'>('ids');
+  const [activeTab, setActiveTab] = useState<'ids' | 'online' | 'denied' | 'badges' | 'voice' | 'bot'>('badges');
   const [allowedIds, setAllowedIds] = useState<string[]>([]);
   const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
   const [deniedUsers, setDeniedUsers] = useState<DeniedUser[]>([]);
+  const [userBadges, setUserBadges] = useState<Record<string, 'BOSS' | 'VIP' | 'MASTER' | 'MEMBER'>>({});
   const [newGameIdsInput, setNewGameIdsInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+
+  // VIP Badge assignment form state
+  const [badgeTargetId, setBadgeTargetId] = useState('');
+  const [badgeTargetRole, setBadgeTargetRole] = useState<'BOSS' | 'VIP' | 'MASTER' | 'MEMBER'>('VIP');
+
+  // Admin Voice Signal form state
+  const [voiceSignalText, setVoiceSignalText] = useState('777 Big Win Killerboss Signal Big လိုက်ထိုးရန် အကြံပြုပါသည်!');
+  const [sendingVoice, setSendingVoice] = useState(false);
 
   const adminId = '8370471165';
 
@@ -78,6 +94,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         setAllowedIds(data.allowedGameIds || []);
         setActiveUsers(data.activeSessions || []);
         setDeniedUsers(data.deniedAttempts || []);
+        if (data.userBadges) setUserBadges(data.userBadges);
       }
     } catch {
       showToast('Error loading admin data');
@@ -138,21 +155,63 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
-  const handleApproveDeniedUser = async (id: string) => {
+  // Assign VIP Badge to user
+  const handleAssignBadge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!badgeTargetId.trim()) return;
+
     try {
-      const res = await fetch('/api/admin/add-id', {
+      const res = await fetch('/api/admin/set-user-badge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameIds: [id] })
+        body: JSON.stringify({
+          gameId: badgeTargetId.trim(),
+          badge: badgeTargetRole
+        })
       });
       const data = await res.json();
       if (data.success) {
-        setAllowedIds(data.allowedGameIds);
-        setDeniedUsers((prev) => prev.filter((u) => u.gameId !== id));
-        showToast(`✅ Approved Game ID ${id}!`);
+        setUserBadges(data.userBadges || {});
+        showToast(`👑 Assigned ${badgeTargetRole} badge to ${badgeTargetId}!`);
+        setBadgeTargetId('');
+        playSoundEffect('win');
       }
     } catch {
-      showToast('Error approving ID');
+      showToast('Error assigning badge');
+    }
+  };
+
+  // Broadcast Admin Voice Signal
+  const handleSendVoiceSignal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!voiceSignalText.trim()) return;
+
+    setSendingVoice(true);
+    try {
+      const res = await fetch('/api/admin/send-voice-signal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: voiceSignalText.trim(),
+          audioLabel: 'Official Admin Voice Call'
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('🎙️ Voice Signal broadcasted to VIP chat room!');
+        playSoundEffect('win');
+
+        // Play local preview speech
+        if ('speechSynthesis' in window) {
+          const u = new SpeechSynthesisUtterance(voiceSignalText.trim());
+          u.rate = 1.05;
+          window.speechSynthesis.speak(u);
+        }
+      }
+    } catch {
+      showToast('Error broadcasting voice signal');
+    } finally {
+      setSendingVoice(false);
     }
   };
 
@@ -164,16 +223,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* Header */}
         <div className="p-4 bg-[#181924] border-b border-red-950/80 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-500">
-              <Shield className="w-4 h-4" />
-            </div>
+            <img
+              src={itachiLogoImg}
+              alt="Admin Logo"
+              className="w-9 h-9 rounded-full object-cover border-2 border-red-500 shadow-md"
+            />
             <div>
               <h3 className="text-sm font-black text-white uppercase tracking-wider">
                 Admin Control Dashboard
               </h3>
-              <span className="text-[10px] text-slate-400 font-mono">
-                Admin Access Only
-              </span>
             </div>
           </div>
 
@@ -244,13 +302,37 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <>
             {/* Toast */}
             {toastMsg && (
-              <div className="bg-red-900/90 text-white text-xs px-4 py-2 font-bold text-center">
+              <div className="bg-red-900/90 text-white text-xs px-4 py-2 font-bold text-center animate-in fade-in">
                 {toastMsg}
               </div>
             )}
 
-            {/* Tabs */}
-            <div className="grid grid-cols-4 gap-1 p-2 bg-[#151620] border-b border-slate-800 text-[11px] font-bold">
+            {/* Navigation Tabs */}
+            <div className="grid grid-cols-5 gap-1 p-2 bg-[#151620] border-b border-slate-800 text-[10px] font-bold">
+              <button
+                onClick={() => setActiveTab('badges')}
+                className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  activeTab === 'badges'
+                    ? 'bg-amber-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Crown className="w-3 h-3 text-yellow-300" />
+                <span>VIP Badges</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('voice')}
+                className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  activeTab === 'voice'
+                    ? 'bg-red-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Volume2 className="w-3 h-3 text-cyan-300" />
+                <span>Voice Signal</span>
+              </button>
+
               <button
                 onClick={() => setActiveTab('ids')}
                 className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer ${
@@ -262,6 +344,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <KeyRound className="w-3 h-3" />
                 <span>Allowed ({allowedIds.length})</span>
               </button>
+
               <button
                 onClick={() => setActiveTab('online')}
                 className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer ${
@@ -273,6 +356,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <UserCheck className="w-3 h-3 text-emerald-400" />
                 <span>Online ({activeUsers.length})</span>
               </button>
+
               <button
                 onClick={() => setActiveTab('denied')}
                 className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer ${
@@ -284,25 +368,133 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <UserX className="w-3 h-3 text-rose-400" />
                 <span>Denied ({deniedUsers.length})</span>
               </button>
-              <button
-                onClick={() => setActiveTab('bot')}
-                className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  activeTab === 'bot'
-                    ? 'bg-red-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Bot className="w-3 h-3 text-sky-400" />
-                <span>Bot Info</span>
-              </button>
             </div>
 
             {/* Content Body */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* TAB 1: ALLOWED GAME IDS */}
+              {/* TAB 1: VIP BADGES MANAGEMENT (Admin Exclusive) */}
+              {activeTab === 'badges' && (
+                <div className="space-y-4">
+                  <form onSubmit={handleAssignBadge} className="p-3.5 bg-[#181924] border border-amber-500/40 rounded-2xl space-y-3">
+                    <div className="flex items-center gap-2 text-amber-400 font-extrabold text-xs">
+                      <Crown className="w-4 h-4 text-amber-400" />
+                      <span>{language === 'my' ? 'VIP ရာထူးတံဆိပ် ခန့်အပ်ရန် (Admin Only)' : 'Assign VIP Role Badge'}</span>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">
+                        {language === 'my' ? 'User ID သို့မဟုတ် Game ID:' : 'User ID / Game ID:'}
+                      </label>
+                      <input
+                        type="text"
+                        value={badgeTargetId}
+                        onChange={(e) => setBadgeTargetId(e.target.value)}
+                        placeholder="e.g. 761699, 864480, DEMO777"
+                        className="w-full bg-[#10121d] border border-slate-700 focus:border-amber-400 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-slate-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">
+                        {language === 'my' ? 'ခန့်အပ်မည့် ရာထူးတံဆိပ် (Role Badge):' : 'Select Badge:'}
+                      </label>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {(['BOSS', 'VIP', 'MASTER', 'MEMBER'] as const).map((role) => (
+                          <button
+                            key={role}
+                            type="button"
+                            onClick={() => setBadgeTargetRole(role)}
+                            className={`py-1.5 rounded-lg text-[10px] font-black border transition-all cursor-pointer ${
+                              badgeTargetRole === role
+                                ? 'bg-amber-500 text-slate-950 border-amber-300 font-black shadow'
+                                : 'bg-[#10121d] text-slate-400 border-slate-700'
+                            }`}
+                          >
+                            {role === 'BOSS' ? '👑 BOSS' : role === 'VIP' ? '💎 VIP' : role === 'MASTER' ? '⚡ MASTER' : '👤 MEMBER'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-xs rounded-xl shadow hover:scale-102 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <Crown className="w-3.5 h-3.5 text-slate-950" />
+                      <span>{language === 'my' ? 'ရာထူးတံဆိပ် ခန့်အပ်မည်' : 'Grant Official Badge'}</span>
+                    </button>
+                  </form>
+
+                  {/* List of currently assigned user badges */}
+                  <div>
+                    <span className="text-xs font-black uppercase text-slate-400 block mb-2">
+                      Official Assigned Badges List ({Object.keys(userBadges).length})
+                    </span>
+                    <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                      {Object.entries(userBadges).map(([uid, badge]) => (
+                        <div
+                          key={uid}
+                          className="p-2.5 bg-[#181924] border border-slate-800 rounded-xl flex items-center justify-between text-xs"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-white font-bold">ID: {uid}</span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                              badge === 'BOSS' ? 'bg-red-950 text-red-300 border border-red-700' :
+                              badge === 'VIP' ? 'bg-cyan-950 text-cyan-300 border border-cyan-700' :
+                              badge === 'MASTER' ? 'bg-amber-950 text-amber-300 border border-amber-700' :
+                              'bg-slate-800 text-slate-300'
+                            }`}>
+                              {badge}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-emerald-400 font-bold">Verified</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: ADMIN VOICE MESSAGE SENDER */}
+              {activeTab === 'voice' && (
+                <div className="space-y-4">
+                  <form onSubmit={handleSendVoiceSignal} className="p-4 bg-[#181924] border border-red-500/40 rounded-2xl space-y-3">
+                    <div className="flex items-center gap-2 text-red-400 font-extrabold text-xs">
+                      <Volume2 className="w-4 h-4 text-red-400" />
+                      <span>{language === 'my' ? 'Admin သီးသန့် Voice စာပို့စနစ် (Admin Voice Broadcast)' : 'Admin Voice Signal Broadcast'}</span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-400">
+                      {language === 'my'
+                        ? 'Admin တစ်ဦးတည်းသာ Voice စာပို့ခွင့်ရှိသည်။ အသံစာသားကို ရိုက်ထည့်၍ Telegram VIP Lounge ထဲသို့ တိုက်ရိုက်ထုတ်လွှင့်ပါ။'
+                        : 'Only Admin is authorized to dispatch Voice Signals. Enter voice call text to broadcast live commentary.'}
+                    </p>
+
+                    <div>
+                      <textarea
+                        value={voiceSignalText}
+                        onChange={(e) => setVoiceSignalText(e.target.value)}
+                        rows={3}
+                        className="w-full bg-[#10121d] border border-slate-700 focus:border-red-500 rounded-xl p-3 text-xs text-white focus:outline-none"
+                        placeholder="Type voice announcement..."
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={sendingVoice}
+                      className="w-full py-2.5 bg-gradient-to-r from-red-600 to-amber-600 text-white font-black text-xs rounded-xl shadow hover:scale-102 transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                      <span>{sendingVoice ? 'ထုတ်လွှင့်နေပါသည်...' : language === 'my' ? 'Voice Signal တိုက်ရိုက်ထုတ်လွှင့်မည်' : 'Broadcast Voice Signal'}</span>
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* TAB 3: ALLOWED GAME IDS */}
               {activeTab === 'ids' && (
                 <div className="space-y-4">
-                  {/* Add ID Form */}
                   <form onSubmit={handleAddGameIds} className="space-y-2">
                     <label className="text-xs font-bold text-slate-300 block">
                       {language === 'my'
@@ -327,7 +519,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </div>
                   </form>
 
-                  {/* List */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-black uppercase text-slate-400">
@@ -362,7 +553,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               )}
 
-              {/* TAB 2: LOGGED IN USERS */}
+              {/* TAB 4: ONLINE LOGGED IN USERS */}
               {activeTab === 'online' && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -413,7 +604,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               )}
 
-              {/* TAB 3: DENIED / UNAUTHORIZED ATTEMPTS */}
+              {/* TAB 5: DENIED USERS */}
               {activeTab === 'denied' && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -453,7 +644,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           </div>
 
                           <button
-                            onClick={() => handleApproveDeniedUser(u.gameId)}
+                            onClick={async () => {
+                              try {
+                                const res = await fetch('/api/admin/add-id', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ gameIds: [u.gameId] })
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                  setAllowedIds(data.allowedGameIds);
+                                  setDeniedUsers((prev) => prev.filter((d) => d.gameId !== u.gameId));
+                                  showToast(`✅ Approved Game ID ${u.gameId}!`);
+                                }
+                              } catch {
+                                showToast('Error approving ID');
+                              }
+                            }}
                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 shadow-md cursor-pointer"
                           >
                             <Check className="w-3.5 h-3.5" />
@@ -463,46 +670,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       ))}
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* TAB 4: TELEGRAM BOT INTEGRATION STATUS */}
-              {activeTab === 'bot' && (
-                <div className="space-y-3 text-xs">
-                  <div className="p-3.5 bg-[#181924] border border-slate-800 rounded-2xl space-y-2">
-                    <span className="font-black text-slate-200 uppercase tracking-wider block">
-                      Telegram Bot Controller
-                    </span>
-                    <div className="space-y-1 text-slate-300 font-mono text-[11px]">
-                      <div>Admin ID: <span className="text-amber-400 font-bold">{adminId}</span></div>
-                      <div>Bot Token: <span className="text-slate-400 truncate block">8682945050:AAFECoNO...</span></div>
-                      <div>Live Polling: <span className="text-emerald-400 font-bold">Active (Auto Sync)</span></div>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 bg-[#181924] border border-slate-800 rounded-2xl space-y-2">
-                    <span className="font-black text-slate-200 uppercase tracking-wider block">
-                      Admin Telegram Commands
-                    </span>
-                    <div className="space-y-2 text-slate-300 text-[11px]">
-                      <div className="p-2 bg-[#12131a] rounded-xl font-mono">
-                        <span className="text-red-400 font-bold">/aid &lt;game_id&gt;</span>
-                        <span className="block text-slate-400 text-[10px]">Add allowed Game ID (e.g. /aid 761699,864480)</span>
-                      </div>
-                      <div className="p-2 bg-[#12131a] rounded-xl font-mono">
-                        <span className="text-red-400 font-bold">/rid &lt;game_id&gt;</span>
-                        <span className="block text-slate-400 text-[10px]">Remove allowed Game ID</span>
-                      </div>
-                      <div className="p-2 bg-[#12131a] rounded-xl font-mono">
-                        <span className="text-red-400 font-bold">/ids</span>
-                        <span className="block text-slate-400 text-[10px]">List all allowed Game IDs</span>
-                      </div>
-                      <div className="p-2 bg-[#12131a] rounded-xl font-mono">
-                        <span className="text-red-400 font-bold">/users</span>
-                        <span className="block text-slate-400 text-[10px]">View online users & denied attempts</span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
